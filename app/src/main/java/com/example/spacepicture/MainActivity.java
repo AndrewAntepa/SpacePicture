@@ -18,6 +18,9 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import retrofit2.Call;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
     TextView desc;
@@ -40,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
         spaceTask.execute();
     }
 
+
     class SpaceTask extends AsyncTask<String, Void, Response> {
         @Override
         protected Response doInBackground(String... strings) {
@@ -61,15 +65,47 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(Response response) {
             super.onPostExecute(response);
-            desc.setText(spaceInfo.explanation);
-            if(spaceInfo.madia_tipe.equals("image")) {
+            //запросим перевод перед показом текста
+            //1 настроить класс - тело и записать в него англ текст
+            BodyTranslate[] bodyTranslates = new BodyTranslate[1];
+            bodyTranslates[0] = new BodyTranslate();
+            bodyTranslates[0].Text = spaceInfo.explanation;
+            //построить объект retrofit
+            Retrofit retrofit = new Retrofit.Builder()
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .baseUrl(AzureTranslateAPI.address)
+                    .build();
+            //создать объект интерфейса
+            AzureTranslateAPI api = retrofit.create(AzureTranslateAPI.class);
+            //отправить запрос
+            Call<ResponseTranslate[]> call = api.requestTranslate(bodyTranslates);
+            call.enqueue(new ResponseCallBack());
+
+//            desc.setText(spaceInfo.explanation);
+            if(spaceInfo.media_type.equals("image")) {
                 Picasso.get()
                         .load(spaceInfo.url)
                         .placeholder(R.drawable.spacee)
                         .into(image);
             } else {
-                desc.append("\n\nСегодня видео, вот ссылка: " + spaceInfo.url);
+                desc.append("Сегодня видео, вот ссылка: " + spaceInfo.url + "\n\n");
             }
+        }
+    }
+
+    private class ResponseCallBack implements retrofit2.Callback<ResponseTranslate[]> {
+        @Override
+        public void onResponse(Call<ResponseTranslate[]> call, retrofit2.Response<ResponseTranslate[]> response) {
+            if(response.isSuccessful() && response.body()[0].translations.size() != 0){
+                String  s = response.body()[0].toString();
+                desc.append(s);
+            } else
+                Toast.makeText(getApplicationContext(), "Error", Toast.LENGTH_SHORT).show();
+        }
+
+        @Override
+        public void onFailure(Call<ResponseTranslate[]> call, Throwable t) {
+
         }
     }
 }
