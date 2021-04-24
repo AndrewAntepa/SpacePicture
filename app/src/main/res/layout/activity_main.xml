@@ -29,6 +29,13 @@
             android:layout_height="wrap_content"
             android:textSize="20sp"
             android:id="@+id/descr"/>
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="20dp"
+            android:text="Озвучить"
+            android:id="@+id/speechButton"
+            android:onClick="getVoices"/>
     </LinearLayout>
 
 </ScrollView>
