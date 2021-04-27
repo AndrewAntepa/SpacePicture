@@ -21,10 +21,13 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 import retrofit2.Call;
+import retrofit2.Callback;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.converter.scalars.ScalarsConverterFactory;
+import retrofit2.converter.simplexml.SimpleXmlConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
     Button speechButton;
@@ -129,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onResponse(Call<String> call, retrofit2.Response<String> response) {
             if(response.isSuccessful()) {
-                token = response.body();
+                token = "Bearer " + response.body();
                 //следующий объектр ретрофит
                 Retrofit voicesRet = new Retrofit.Builder()
                         .baseUrl(AzureVoicesApi.voiceURI)
@@ -156,13 +159,47 @@ public class MainActivity extends AppCompatActivity {
             ArrayList<Dictor> dictors = new ArrayList<>();
             if(response.isSuccessful()) {
                 dictors = response.body();
-                Toast.makeText(getApplicationContext(), dictors.get(0).ShortName, Toast.LENGTH_SHORT).show();
+                for (int i = 0; i < dictors.size(); i++) {
+                    desc.append(dictors.get(i).toString());
+                    if(dictors.get(i).Locate.equals("ru-RU") && dictors.get(i).ShortName.equals("ru-RU-Pavel")){
+                        //запрос на озвучку
+                        VoiceChoice voiceChoice = new VoiceChoice();
+                        voiceChoice.lang = dictors.get(i).Locate;
+                        voiceChoice.voice.lang = dictors.get(i).Locate;
+                        voiceChoice.voice.gender = dictors.get(i).Gender;
+                        voiceChoice.voice.name = dictors.get(i).ShortName;
+                        voiceChoice.voice.text = desc.getText().toString();
+
+                        Retrofit voiceRetrofit = new Retrofit.Builder()
+                                .baseUrl(AzureVoicesApi.voiceURI)
+                                .addConverterFactory(SimpleXmlConverterFactory.create())
+                                .build();
+                        AzureVoicesApi azureVoicesApi = voiceRetrofit.create(AzureVoicesApi.class);
+                        Call<ResponseBody> callVoice = azureVoicesApi.getVoice(token, voiceChoice);
+                        callVoice.enqueue(new Callback<ResponseBody>() {
+                            @Override
+                            public void onResponse(Call<ResponseBody> call, retrofit2.Response<ResponseBody> response) {
+                                //TODO скачать байтовый поток в файл
+                                //TODO 1 открыть файл для записи в песочнице
+                                //TODO 2 создать байтовый массив на 4096
+                                //TODO 3 читать кусок из потока в response.body()
+                                //TODO 4 записать прочитанное в файл
+                                //TODO 5 после скачивания запустить файл на проигрование
+                            }
+
+                            @Override
+                            public void onFailure(Call<ResponseBody> call, Throwable t) {
+
+                            }
+                        });
+                    }
+                }
             } else Toast.makeText(getApplicationContext(), Integer.toString(response.code()), Toast.LENGTH_SHORT).show();
         }
 
         @Override
         public void onFailure(Call<ArrayList<Dictor>> call, Throwable t) {
-
+            Toast.makeText(getApplicationContext(), t.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 }
